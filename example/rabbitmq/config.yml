@@ -1,0 +1,27 @@
+---
+
+- name: Gather config templates
+  find:
+    paths: config/
+  register: config-files
+
+- name: Map Variables
+  set_fact:
+    plugins: {{ cluster.plugins }}
+    default_user: {{ users.admin.name }}
+    default_pass: {{ lookup('onepassword', '{{ users.admin.password }}', field='password') }}
+    default_vhost: {{ cluster.vhost }}
+
+- name: Generate ConfigMap Data schema
+  configData:
+    data:
+      - name: {{ item.name }}
+        template: {{ item.path }}
+  loop: {{ config-files }}
+  register: config-data
+
+- name: Create config map
+  configMap:
+    name: {{ cluster.name }}-config
+    data: {{ config-data }}
+

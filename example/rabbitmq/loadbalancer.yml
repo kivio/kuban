@@ -1,0 +1,46 @@
+- name: Describe Ports
+  set_facts:
+    ports:
+      - name: https
+        port: 15672
+        protocol: TCP
+        targetPort: 15672
+      - name: amqp
+        port: 5672
+        protocol: TCP
+        targetPort: 5672
+      - name: epmd
+        protocol: TCP
+        port: 4369
+        targetPort: 4369
+      - name: epmd-report
+        protocol: TCP
+        port: 25672
+        targtPort: 25672
+
+
+- name: Create load balancer
+  service:
+    name: {{ cluster.name }}-balancer
+    labels: 
+      app: {{ cluster.name }}
+      type: LoadBalancer
+      spec:
+        ports: {{ ports }}
+      selector:
+        app: {{ cluster.name }}
+   register: cluster-balancer
+
+ - name: Create service to access individual nodes
+   service:
+     name: {{ cluster.name }}
+     labels:
+       app: {{ cluster.name }}
+     spec:
+       clusterIP: None
+       ports:
+         - name: amqp
+           port: 5672
+           targetPort: 5672
+      selector: 
+        app: {{ cluster.name }}

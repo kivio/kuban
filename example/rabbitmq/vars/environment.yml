@@ -1,0 +1,21 @@
+---
+
+- name: Create envirnment mapping
+  envMapping:
+  data:
+    - RABBITMQ_ERLANG_COOKIE:
+        secret: {{ cluster-secrets }}
+        key: cookie
+    - K8S_SERVICE_NAME:
+        value: {{ cluster.name }}
+    - POD_ID:
+        discover: status.podID
+    - POD_NAME:
+        discover: metadata.name
+    - POD_NAMESPACE:
+        discover: metadata.namespace
+    - RABBITMQ_NODENAME:
+        template: "rabbit@{{ POD_NAME }}.{{ cluster.name }}.{{ POD_NAMESPACE }}.svc.cluster.local"
+    - RABBITMQ_CONFIG_FILE:
+        value: /var/lib/rabbitmq/rabbitmq.conf
+  register: cluster-envs

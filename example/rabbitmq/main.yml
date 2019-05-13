@@ -1,0 +1,35 @@
+---
+
+- name: Create Service Account for K8s RMQ auto discovery
+  serviceAccount:
+    name: {{ service-account }}
+
+- name: Bind role to Service Account
+  roleBinding:
+    name: {{ service-account }}-view
+    roleRef:
+      kind: Role
+      name: view
+    subjects:
+      - kind: ServiceAccound
+        name: {{ service-account }}
+  register:  service-account
+
+- name: Include secrets
+  include: secrets.yml
+
+- name: Include configuration
+  include: config.yml
+
+- name: Include Load Balancer configurations
+  include: loadbalancer.yml
+
+- name:  Include Route for OpenShift
+  include: route.yml
+  when: {{ kube-distro }} == "OpenShift"
+
+- name: Include Service runner
+  include: service.yml
+
+- name: Include configurer job
+  include: configurer.yml

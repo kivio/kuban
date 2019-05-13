@@ -1,0 +1,23 @@
+---
+
+kube-distro: OpenShift
+cluster:
+  name: rabbitmq-cluster
+  image: rabbitmq-node
+  size: 3
+  version: 3.7.12
+  vhost: project-vhost
+  cookie: ERLANG
+  plugins: []
+configurer:
+  image: rabbitmq-config
+  version: 3.7.12
+users:
+  admin:
+    name: rabbitmq
+    password: ONEPASS
+  developer:
+    name: developer
+    password: ONEPASS
+volume: 1Gi
+service-account: rabbitmq-discovery

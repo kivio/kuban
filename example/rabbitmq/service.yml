@@ -1,0 +1,76 @@
+---
+
+- name: Load environment variables
+  include: vars/environment.yml
+
+- set_facts:
+    liviness_command:
+      - docker-entrypoint.sh
+      - rabbitmqctl
+      - status
+
+- name: Configure configuration volume mount
+  podVolumeMount:
+    - name: config-volume
+      path: /etc/rabbitmq
+      type: configMap
+      object: {{ cluster.name }}-config
+      # whitout items field it will map all items with same names
+  register: config-volume
+
+
+- name: Configure Pod Spec
+  podSpec:
+    serviceAccountName: {{ service-account.name }}
+    terminationGracePeriodSeconds: 30
+    containers:
+      - name: rabbitmq
+        command:
+          - sh
+        args:
+          - -c
+          - cp -v /etc/rabbitmq/rabbitmq.conf {{ cluster.config-file }}; exec docker-entrypoint.sh rabbitmq-server
+        image: {{ cluster.image }}:{{ cluster.version }}
+        imagePullPolicy: Always
+        volumeMounts:
+          - {{ config-volume }}
+          - name: rabbitmq-storage
+            mountPath: /var/lib/rabbitmq
+        ports: {{ lookup('dict', ports | rename_keys('port', 'containerPort')) }}
+        livinessProbe:
+          exec:
+            command: {{ liviness_command }}
+          initialDelaySeconds: 30
+          timeoutSeconds: 10
+        redinessProbe:
+          exec:
+            command: {{ liviness_command }}
+          initialDelaySeconds: 10
+          timeoutSeconds: 10
+        env: {{ cluster-envs }}
+  register: pod-spec
+
+- name: Configure rabbitmq service
+  statefulSet:
+    name: {{ cluster.name }}
+    labels: 
+      app: {{ cluster.name }}
+    spec:
+      serviceName: {{ cluster.name }}
+      replicas: {{ cluster.size }}
+      selector:
+        matchLabels:
+          app: {{ cluster.name }}
+      template:
+        labels:
+          app: {{ cluster.name }}
+        spec: {{ pod-spec }}
+    volumeClaimTemplates:
+      - metadata: 
+          name: rabbitmq-storage
+        spec:
+          accessModes: [ "ReadWriteOnce" ]
+          resources: 
+            request:
+              storage: {{ volume }}
+

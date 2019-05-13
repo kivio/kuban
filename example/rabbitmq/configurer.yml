@@ -1,0 +1,43 @@
+---
+
+- name: retrive secret data to values
+  secretMapper:
+    name: {{ cluster-secrets }}
+    mappings:
+      - cookie: RABBITMQ_ERLANG_COOKIE
+        work_username: RABBITMQ_WORK_USER
+        work_password: RABBITMQ_WORK_PASS
+        admin_username: RABBTIMQ_ADMIN_USER
+        admin_password: RABBITMQ_ADMIN_PASS
+        vhost: RABBITMQ_VHOST
+  register: secret-mapping
+
+- name: Configure environments
+  envMapping:
+    {{ secret-mapping }}
+    - POD_NAMESPACE:
+        discover: metadata.namespace
+    - RABBITMQ_USE_LONGNAME:
+        value: "true"
+    - RABBITMQ_NODE_NAME:
+        template: "rabbit@{{ POD_NAME }}.{{ cluster.name }}.{{ POD_NAMESPACE }}.svc.cluster.local"
+  register: configurer-envs
+
+- name: Create configuration Job
+  batchJob:
+    name: rabbitmq-configure
+    backoffLimit: 4
+    spec:
+      template:
+        restartPolicy: Never
+        spec:
+          containers:
+          - name: rabbitmq-configure
+            image: "{{ configurer.image }}:{{ configurer.version }}"
+            command: ["docker-entrypoint.sh"]
+            imagePullPolicy: Always
+            env: {{ configurer-envs }}
+            args:
+              - ${CLUSTER_NAME}-balancer.$(POD_NAMESPACE).svc 
+              - ${CLUSTER_SIZE}
+              - ${CLUSTER_NAME}-0.${CLUSTER_NAME}.$(POD_NAMESPACE).svc.cluster.local

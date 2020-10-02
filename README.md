@@ -1,3 +1,5 @@
+Migrated to Gitlab: https://gitlab.com/mkandco/kuban
+
 # kuban
 Kuban is a custom kubernetes wrapper for ansible that make possible to build kubernetes reusable charts simpler
 
